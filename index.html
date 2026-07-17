@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <!-- ล็อกการซูมบนมือถือ เพื่อไม่ให้หน้าจอกระตุกเวลาพิมพ์ -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Python Quest: อัศวินโค้ดดิ้ง</title>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;600&family=Fira+Code:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --panel-bg: #1e293b;
+            --primary: #3b82f6;
+            --accent: #f43f5e;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --text-light: #f8fafc;
+            --code-bg: #020617;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Prompt', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-light);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            /* ป้องกันการเลื่อนหน้าจอที่ไม่จำเป็นบนมือถือ */
+            overflow-x: hidden; 
+            padding: 10px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 500px; /* ขนาดพอดีมือถือ-แท็บเล็ต */
+            background: var(--panel-bg);
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5), 0 0 10px var(--primary);
+            padding: 20px;
+            position: relative;
+            border: 1px solid #334155;
+            display: flex;
+            flex-direction: column;
+        }
+
+        h1, h2, h3 { text-align: center; margin-bottom: 15px; }
+        h1 { font-size: 24px; color: var(--primary); text-shadow: 0 0 8px rgba(59,130,246,0.5); }
+
+        .screen { display: none; width: 100%; }
+        .screen.active { display: block; animation: fadeIn 0.4s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+
+        /* Inputs & Buttons - ออกแบบให้เหมาะกับการแตะ (Touch) */
+        input[type="text"] {
+            width: 100%;
+            padding: 14px;
+            border-radius: 10px;
+            border: 2px solid #475569;
+            background: #0f172a;
+            color: white;
+            font-size: 16px; /* บังคับ 16px ป้องกัน iOS Safari ซูม */
+            font-family: 'Prompt', sans-serif;
+            margin-bottom: 15px;
+            outline: none;
+            transition: 0.3s;
+        }
+        input[type="text"]:focus { border-color: var(--primary); box-shadow: 0 0 8px rgba(59,130,246,0.5); }
+
+        button {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            color: white;
+            border: none;
+            padding: 14px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-family: 'Prompt', sans-serif;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: all 0.2s;
+            margin-bottom: 10px;
+            min-height: 48px; /* Touch target size */
+            box-shadow: 0 4px 10px rgba(37, 99, 235, 0.3);
+        }
+        button:active { transform: translateY(2px); }
+        button.btn-danger { background: linear-gradient(135deg, #f43f5e, #e11d48); box-shadow: 0 4px 10px rgba(244, 63, 94, 0.3); }
+        button.btn-success { background: linear-gradient(135deg, #10b981, #059669); box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3); }
+        button.btn-outline { background: transparent; border: 2px solid #475569; color: var(--text-light); box-shadow: none; }
+
+        /* Game Header (Mobile Optimized) */
+        .game-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #0f172a;
+            padding: 12px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            font-size: 14px;
+            font-weight: 600;
+            border: 1px solid #334155;
+        }
+        .hp-box { color: var(--warning); font-size: 16px; }
+
+        /* Quest & Code Area */
+        .quest-box {
+            background: rgba(59, 130, 246, 0.1);
+            padding: 12px;
+            border-radius: 8px;
+            border-left: 4px solid var(--primary);
+            margin-bottom: 15px;
+            font-size: 15px;
+            line-height: 1.5;
+        }
+
+        .code-area {
+            background: var(--code-bg);
+            padding: 15px;
+            border-radius: 10px;
+            font-family: 'Fira Code', monospace;
+            font-size: 15px;
+            color: #a6e22e;
+            line-height: 1.7;
+            margin-bottom: 15px;
+            border: 1px solid #334155;
+            overflow-x: auto; /* เลื่อนซ้ายขวาได้ถ้าโค้ดยาว */
+            white-space: nowrap;
+        }
+
+        .code-input-inline {
+            background: #1e293b;
+            border: 1px solid var(--primary);
+            border-radius: 4px;
+            color: #fb923c;
+            font-family: 'Fira Code', monospace;
+            font-size: 16px; /* บังคับ 16px */
+            width: 120px;
+            text-align: center;
+            padding: 2px 5px;
+            outline: none;
+            margin: 0 5px;
+        }
+        
+        .code-input-area {
+            width: 100%;
+            background: transparent;
+            border: 1px dashed var(--primary);
+            border-radius: 8px;
+            color: #fb923c;
+            font-family: 'Fira Code', monospace;
+            font-size: 16px; /* บังคับ 16px */
+            padding: 10px;
+            margin-top: 10px;
+            resize: none;
+            outline: none;
+            min-height: 80px;
+        }
+
+        /* Result & Leaderboard */
+        .medal-icon { font-size: 70px; margin: 10px 0; text-align: center; display: block; animation: pop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        @keyframes pop { 0% { transform: scale(0); } 100% { transform: scale(1); } }
+        
+        .score-display { font-size: 36px; text-align: center; font-weight: bold; margin-bottom: 15px; }
+        
+        .table-wrapper {
+            max-height: 250px;
+            overflow-y: auto;
+            border-radius: 8px;
+            border: 1px solid #334155;
+            margin-bottom: 15px;
+        }
+        table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        th, td { padding: 10px; text-align: left; border-bottom: 1px solid #334155; }
+        th { background-color: #0f172a; position: sticky; top: 0; }
+        tr:nth-child(even) { background-color: rgba(255,255,255,0.02); }
+
+        .shake { animation: shake 0.4s; border-color: var(--accent) !important; background-color: rgba(244, 63, 94, 0.1); }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-8px); } 75% { transform: translateX(8px); } }
+        
+        /* แก้ปัญหาหน้าจอเล็ก */
+        @media (max-width: 360px) {
+            .code-area { font-size: 13px; }
+            h1 { font-size: 20px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- หน้าล็อกอิน -->
+    <div id="loginScreen" class="screen active">
+        <h1>🗡️ Python Quest<br><span style="font-size: 16px; color: var(--text-light); font-weight: normal;">อัศวินโค้ดดิ้งตะลุยด่าน (ม.2)</span></h1>
+        <p style="text-align: center; margin-bottom: 20px; font-size: 14px; color: #94a3b8;">
+            พิสูจน์ทักษะ Python ของท่าน ทำภารกิจ 20 ด่าน<br>ต้องผ่าน 90% (18 ข้อ) เพื่อคว้าเหรียญทอง!
+        </p>
+        
+        <!-- ปิด Autocomplete, Autocapitalize เพื่อการพิมพ์โค้ด/ชื่อที่ถูกต้อง -->
+        <input type="text" id="playerName" placeholder="พิมพ์ชื่อ-นามสกุล หรือ ฉายา..." 
+               autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false">
+               
+        <button onclick="startGame()">เริ่มการผจญภัย!</button>
+        <button class="btn-outline" onclick="showLeaderboard()">🏆 หอเกียรติยศ (Top 10)</button>
+    </div>
+
+    <!-- หน้าเล่นเกม -->
+    <div id="gameScreen" class="screen">
+        <div class="game-header">
+            <div style="color: var(--primary); max-width: 40%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                <span id="uiPlayerName">Player</span>
+            </div>
+            <div>ด่าน: <span id="uiLevel" style="color: white;">1/20</span></div>
+            <div class="hp-box">⭐ <span id="uiScore">0</span></div>
+        </div>
+
+        <div class="quest-box" id="questText">
+            ภารกิจ...
+        </div>
+
+        <div class="code-area" id="codeArea">
+            <!-- ช่องเติมโค้ด -->
+        </div>
+
+        <button id="submitBtn" onclick="checkAnswer()">ร่ายเวทย์! (ส่งคำตอบ)</button>
+    </div>
+
+    <!-- หน้าสรุปผล -->
+    <div id="resultScreen" class="screen">
+        <h1 id="resultTitle">สรุปผลการผจญภัย</h1>
+        <div id="medalIcon" class="medal-icon">🥇</div>
+        <div id="finalScore" class="score-display">0 / 20</div>
+        <p id="resultDesc" style="text-align: center; font-size: 15px; margin-bottom: 20px; color: #cbd5e1;"></p>
+        
+        <button id="restartBtn" onclick="location.reload()">กลับสู่หน้าแรก</button>
+        <button class="btn-outline" onclick="showLeaderboard()">🏆 ดูหอเกียรติยศ</button>
+    </div>
+
+    <!-- หน้า Leaderboard -->
+    <div id="leaderboardScreen" class="screen">
+        <h1>🏆 หอเกียรติยศ</h1>
+        <div class="table-wrapper">
+            <table id="leaderboardTable">
+                <tr><th>อันดับ</th><th>ชื่อ</th><th>คะแนน</th><th>ผล</th></tr>
+            </table>
+        </div>
+        <button onclick="location.reload()">กลับสู่หน้าแรก</button>
+    </div>
+</div>
+
+<script>
+    // คลังโจทย์ระดับอัปสกิล ม.2 (ครอบคลุมเนื้อหาเชิงลึกขึ้น)
+    const allQuests = [
+        { type: 'inline', quest: 'แสดงข้อความว่า <b>Hello</b> โดยใช้คำสั่ง Print', before: '', after: '("Hello")', answers: ['print'] },
+        { type: 'inline', quest: 'รับข้อมูลจากคีย์บอร์ดมาเก็บไว้ในตัวแปร <b>name</b>', before: 'name = ', after: '("Enter: ")', answers: ['input'] },
+        { type: 'inline', quest: 'แปลงค่าตัวแปร x ให้เป็น <b>จำนวนเต็ม (Integer)</b>', before: 'x = ', after: '("50")', answers: ['int'] },
+        { type: 'inline', quest: 'หาความยาวของข้อความในตัวแปร <b>text</b>', before: 'size = ', after: '(text)', answers: ['len'] },
+        { type: 'inline', quest: 'เปลี่ยนข้อความในตัวแปร s ให้เป็น <b>ตัวพิมพ์ใหญ่ทั้งหมด</b>', before: 'print(s.', after: '())', answers: ['upper'] },
+        { type: 'inline', quest: 'เพิ่มคำว่า "Apple" ต่อท้ายเข้าไปใน List <b>fruits</b>', before: 'fruits.', after: '("Apple")', answers: ['append'] },
+        { type: 'inline', quest: 'เข้าถึงข้อมูลใน List fruits <b>ตำแหน่งสุดท้าย</b> (ใช้อินเด็กซ์ติดลบ)', before: 'print(fruits[', after: '])', answers: ['-1'] },
+        { type: 'inline', quest: 'ลบข้อมูลตำแหน่งสุดท้ายออกจาก List <b>fruits</b>', before: 'fruits.', after: '()', answers: ['pop'] },
+        { type: 'inline', quest: 'สไลซ์ (Slice) List nums เพื่อเอาข้อมูลตั้งแต่ตำแหน่งที่ 0 ถึง 2', before: 'nums[0:', after: ']', answers: ['3'] },
+        { type: 'inline', quest: 'ตรวจสอบว่า "Cat" <b>อยู่หรือไม่ได้อยู่</b> ใน List animals (ใช้ in)', before: 'if "Cat" ', after: ' animals:', answers: ['in'] },
+        { type: 'inline', quest: 'สร้าง <b>Dictionary</b> เก็บค่า name เป็น "John"', before: 'user = {', after: ': "John"}', answers: ['"name"', "'name'"] },
+        { type: 'inline', quest: 'สร้างเงื่อนไขตรวจสอบว่า x <b>ไม่เท่ากับ</b> 10', before: 'if x ', after: ' 10:', answers: ['!='] },
+        { type: 'inline', quest: 'ใช้ตัวดำเนินการ <b>Modulo (%)</b> เพื่อเช็คว่า x เป็นเลขคู่หรือไม่', before: 'if x % 2 == ', after: ':', answers: ['0'] },
+        { type: 'inline', quest: 'วนลูป For ซ้ำจำนวน <b>10 รอบ</b>', before: 'for i in ', after: '(10):', answers: ['range'] },
+        { type: 'inline', quest: 'เขียนคำสั่งวนลูป <b>While</b> ให้ทำงานตลอดกาล (Infinite Loop)', before: 'while ', after: ':', answers: ['True'] },
+        { type: 'inline', quest: 'สร้างการประกาศฟังก์ชัน (Define Function) ชื่อว่า <b>calc</b>', before: '', after: ' calc():', answers: ['def'] },
+        { type: 'inline', quest: 'นำเข้า (Import) ไลบรารี <b>random</b> เพื่อใช้สุ่มตัวเลข', before: '', after: ' random', answers: ['import'] },
+        { type: 'inline', quest: 'ยุติการทำงานและกระโดด <b>ออกจากลูป (Loop)</b> ทันที', before: 'if x > 5:<br>&nbsp;&nbsp;&nbsp;&nbsp;', after: '', answers: ['break'] },
+        
+        // แบบเขียนโค้ด (Textarea)
+        { type: 'textarea', quest: 'เขียนโค้ด 1 บรรทัด เพื่อคืนค่า (Return) ตัวแปรผลลัพธ์ที่ชื่อ <b>ans</b> ออกจากฟังก์ชัน', answerRegex: /^return\s+ans$/ },
+        { type: 'textarea', quest: 'สร้างตัวแปรชื่อ <b>age</b> และกำหนดค่าเป็น <b>15</b>', answerRegex: /^age\s*=\s*15$/ },
+        { type: 'textarea', quest: 'เขียนคำสั่ง <b>ข้ามการทำงานในรอบปัจจุบัน</b> ของลูปไปยังรอบถัดไป', answerRegex: /^continue$/ },
+        { type: 'textarea', quest: 'ใช้ <b>f-string</b> เพื่อ print ข้อความว่า: My age is ตามด้วยค่าในตัวแปร age', answerRegex: /^print\s*\(\s*[fF]["']My age is \{age\}["']\s*\)$/ },
+        { type: 'textarea', quest: 'เขียนเงื่อนไข <b>Else If</b> ตรวจสอบว่า x น้อยกว่า 5', answerRegex: /^elif\s+x\s*<\s*5\s*:$/ },
+    ];
+
+    let gameQuests = [];
+    let currentLevel = 0;
+    let score = 0;
+    let playerName = "";
+    const TOTAL_LEVELS = 20;
+    const PASS_PERCENTAGE = 0.9; // 90% (18/20)
+
+    function shuffleArray(array) {
+        return array.sort(() => 0.5 - Math.random());
+    }
+
+    function startGame() {
+        const nameInput = document.getElementById('playerName').value.trim();
+        if (nameInput === "") {
+            alert("กรุณาพิมพ์ชื่อก่อนเริ่มผจญภัย!");
+            document.getElementById('playerName').focus();
+            return;
+        }
+        playerName = nameInput;
+        
+        // สุ่มโจทย์มา 20 ข้อจากคลังโจทย์
+        gameQuests = shuffleArray([...allQuests]).slice(0, Math.min(TOTAL_LEVELS, allQuests.length));
+        
+        document.getElementById('loginScreen').classList.remove('active');
+        document.getElementById('gameScreen').classList.add('active');
+        document.getElementById('uiPlayerName').innerText = playerName;
+        
+        currentLevel = 0;
+        score = 0;
+        loadLevel();
+    }
+
+    function loadLevel() {
+        document.getElementById('uiLevel').innerText = `${currentLevel + 1}/${TOTAL_LEVELS}`;
+        document.getElementById('uiScore').innerText = score;
+        
+        const q = gameQuests[currentLevel];
+        document.getElementById('questText').innerHTML = q.quest;
+        
+        const codeArea = document.getElementById('codeArea');
+        if (q.type === 'inline') {
+            // ปิด autocapitalize/autocorrect ในช่องพิมพ์โค้ด
+            codeArea.innerHTML = `${q.before}<input type="text" id="answerInput" class="code-input-inline" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false">${q.after}`;
+        } else if (q.type === 'textarea') {
+            codeArea.innerHTML = `<textarea id="answerInput" class="code-input-area" placeholder="พิมพ์โค้ดที่นี่..." autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false"></textarea>`;
+        }
+
+        // Focus อัตโนมัติ (บางเบราว์เซอร์มือถืออาจบล็อกการเด้งคีย์บอร์ดอัตโนมัติ ต้องให้เด็กแตะเอง)
+        setTimeout(() => {
+            const input = document.getElementById('answerInput');
+            if(input) input.focus();
+        }, 100);
+
+        // รองรับการกด Enter บนมือถือ
+        document.getElementById('answerInput').addEventListener("keypress", function(event) {
+            if (event.key === "Enter" && q.type === 'inline') {
+                event.preventDefault();
+                checkAnswer();
+            }
+        });
+    }
+
+    function checkAnswer() {
+        const q = gameQuests[currentLevel];
+        const inputElem = document.getElementById('answerInput');
+        if(!inputElem) return;
+
+        let userAnswer = inputElem.value.trim();
+        if(userAnswer === "") {
+            document.getElementById('codeArea').classList.add('shake');
+            setTimeout(() => document.getElementById('codeArea').classList.remove('shake'), 400);
+            return;
+        }
+
+        let isCorrect = false;
+
+        if (q.type === 'inline') {
+            // ตัดช่องว่างและแปลงเป็นตัวพิมพ์เล็ก (ป้องกันเด็กมือถือพิมพ์ใหญ่มาโดยไม่ตั้งใจ) 
+            // แต่เนื่องจาก Python case-sensitive ถ้าเด็กพิมพ์พิมพ์ใหญ่มา จริงๆ ถือว่าผิด 
+            // แต่เพื่อ UX ที่ดีบนมือถือ เราจะตัด Space ออกอย่างเดียว ส่วน Case ปล่อยตามโจทย์ (เช่น in, int ต้องเล็ก)
+            const cleanUserAns = userAnswer.replace(/\s+/g, '');
+            isCorrect = q.answers.some(ans => cleanUserAns === ans);
+        } else if (q.type === 'textarea') {
+            // Regex Test
+            isCorrect = q.answerRegex.test(userAnswer);
+        }
+
+        if (isCorrect) {
+            score++;
+            document.getElementById('codeArea').style.borderColor = "var(--success)";
+            setTimeout(() => document.getElementById('codeArea').style.borderColor = "#334155", 300);
+        } else {
+            document.getElementById('codeArea').classList.add('shake');
+            setTimeout(() => document.getElementById('codeArea').classList.remove('shake'), 400);
+        }
+
+        currentLevel++;
+        if (currentLevel < TOTAL_LEVELS) {
+            setTimeout(loadLevel, 150); // ดีเลย์นิดนึงให้เห็น Effect
+        } else {
+            setTimeout(endGame, 150);
+        }
+    }
+
+    function endGame() {
+        document.getElementById('gameScreen').classList.remove('active');
+        document.getElementById('resultScreen').classList.add('active');
+        
+        document.getElementById('finalScore').innerText = `${score} / ${TOTAL_LEVELS}`;
+        
+        const winThreshold = Math.ceil(TOTAL_LEVELS * PASS_PERCENTAGE); // 18 คะแนน
+        let result = "";
+
+        if (score >= winThreshold) {
+            document.getElementById('resultTitle').innerText = "🎉 ภารกิจสำเร็จ!";
+            document.getElementById('resultTitle').style.color = "var(--success)";
+            document.getElementById('medalIcon').innerText = "🥇";
+            document.getElementById('resultDesc').innerHTML = `เก่งมาก! คุณทำได้ ${score} คะแนน<br>คู่ควรกับเหรียญทองอัศวินโค้ดดิ้ง!`;
+            document.getElementById('finalScore').style.color = "var(--success)";
+            document.getElementById('restartBtn').className = "btn-success";
+            document.getElementById('restartBtn').innerText = "เล่นอีกครั้ง";
+            result = "🥇 ผ่าน";
+        } else {
+            document.getElementById('resultTitle').innerText = "💀 ภารกิจล้มเหลว";
+            document.getElementById('resultTitle').style.color = "var(--accent)";
+            document.getElementById('medalIcon').innerText = "💔";
+            document.getElementById('resultDesc').innerHTML = `คุณทำได้ ${score} คะแนน (ต้องการ ${winThreshold} เพื่อผ่าน)<br>รวบรวมสมาธิแล้วกลับไปฝึกมาใหม่!`;
+            document.getElementById('finalScore').style.color = "var(--accent)";
+            document.getElementById('restartBtn').className = "btn-danger";
+            document.getElementById('restartBtn').innerText = "ลองใหม่อีกครั้ง";
+            result = "❌ ไม่ผ่าน";
+        }
+
+        saveScore(playerName, score, result);
+    }
+
+    function saveScore(name, finalScore, resultText) {
+        let scores = JSON.parse(localStorage.getItem('pythonQuestScores_m2')) || [];
+        scores.push({ name: name, score: finalScore, result: resultText });
+        
+        // เรียงคะแนนมากไปน้อย ถ้าเท่ากันให้คนที่เล่นทีหลังอยู่ล่าง
+        scores.sort((a, b) => b.score - a.score);
+        scores = scores.slice(0, 10); // เก็บแค่ Top 10
+        
+        localStorage.setItem('pythonQuestScores_m2', JSON.stringify(scores));
+    }
+
+    function showLeaderboard() {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.getElementById('leaderboardScreen').classList.add('active');
+
+        const table = document.getElementById('leaderboardTable');
+        table.innerHTML = `<tr><th>ลำดับ</th><th>อัศวิน</th><th>คะแนน</th><th>สถานะ</th></tr>`;
+        
+        let scores = JSON.parse(localStorage.getItem('pythonQuestScores_m2')) || [];
+        
+        if(scores.length === 0) {
+            table.innerHTML += `<tr><td colspan="4" style="text-align:center; padding: 20px;">ยังไม่มีผู้บันทึกคะแนน</td></tr>`;
+        } else {
+            scores.forEach((s, index) => {
+                const isPass = s.result.includes('ผ่าน') && !s.result.includes('ไม่');
+                let row = `<tr>
+                    <td style="text-align:center;">${index + 1}</td>
+                    <td style="max-width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${s.name}</td>
+                    <td style="text-align:center; font-weight:bold; color: ${isPass ? 'var(--success)' : 'var(--text-light)'}">${s.score}</td>
+                    <td style="font-size:12px; color: ${isPass ? 'var(--success)' : 'var(--accent)'}">${s.result}</td>
+                </tr>`;
+                table.innerHTML += row;
+            });
+        }
+    }
+</script>
+
+</body>
+</html>
